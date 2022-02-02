@@ -1,0 +1,25 @@
+Hi é automatico? Pode ser (falar na doc)
+
+O que acontece se nao digitar origin
+
+Mandar o id do exibidor no emissor
+
+Comando que não existe manda error
+
+Receber parametro opcional do servidor falando se é IPv4 ou IPv6 (usar IPv6 no padrão e printar isso na tela)
+
+Pode colocar numero de caracteres pra tudo que manda alguma mensagem
+
+Imprimir identificador do servidor na tela
+
+Qualquer coisa com emissor no destino passar pro exibidor dele
+
+Falar que envia os shorts tudo como network byte order
+
+Falar que manda tamanho igual a zero pra todas as mensagens sem mensagem no corpo
+
+Falar que HI com valor diferente de 2^12 a 2^13-1 cria um emissor com nenhum exibidor
+
+Pode ser que conecte cliente o suficiente pra acabar os ids ao longo do tempo? (PERGUNTAR)
+
+Servidor vira a origem do KILL para o exibidor. Se receber KILL de alguem que não é emissor retorna erro.
