@@ -262,12 +262,10 @@ void comunicarComServidor(int socketCliente)
         }
         else if (operacao == "planetlist")
         {
-            unsigned short destino;
-            ss >> destino;
             Mensagem mensagem;
             mensagem.tipo = 10;
             mensagem.idOrigem = idCliente;
-            mensagem.idDestino = destino;
+            mensagem.idDestino = idServidor;
             mensagem.numSeq = seqMsgs++;
             enviarMensagem(socketCliente, mensagem);
             Mensagem resposta = receberMensagem(socketCliente);

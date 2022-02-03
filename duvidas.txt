@@ -39,3 +39,5 @@ PlanetList vem ordenado e Clist vem ordenado
 Emissor manda mensagem pra todo mundo se der o id
 
 Fez um monitor pras estruturas de dados
+
+Planetlist tem destino??

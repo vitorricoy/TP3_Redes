@@ -152,7 +152,14 @@ void tratarKill(int socketCliente, unsigned short idCliente, Mensagem mensagem)
 
 void tratarMsg(int socketCliente, unsigned short idCliente, Mensagem mensagem)
 {
-    printf("< msg de %d: \"%s\"\n", mensagem.idOrigem, mensagem.texto.c_str());
+    if (mensagem.idDestino == 0)
+    {
+        printf("< msg de broadcast de %d: \"%s\"\n", mensagem.idOrigem, mensagem.texto.c_str());
+    }
+    else
+    {
+        printf("< msg de %d: \"%s\"\n", mensagem.idOrigem, mensagem.texto.c_str());
+    }
     Mensagem resposta;
     resposta.tipo = 1; // Mensagem ok
     resposta.idOrigem = idCliente;
