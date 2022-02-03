@@ -1,23 +1,16 @@
+#include "common.h"
+
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <string>
 
 #include <arpa/inet.h>
 
-struct Mensagem
-{
-    unsigned short tipo;
-    unsigned short idOrigem;
-    unsigned short idDestino;
-    unsigned short numSeq;
-    char texto[BUFSZ];
-    bool valida;
+#define BUFSZ 2000000
 
-    Mensagem() : valida(true);
-};
-
-void sairComMensagem(char *msg)
+void sairComMensagem(const char *msg)
 {
     perror(msg);
     exit(EXIT_FAILURE);
@@ -69,29 +62,29 @@ void enviarMensagem(int socket, Mensagem aEnviar)
     unsigned short idDestino = htons(aEnviar.idDestino);
     unsigned short numSeq = htons(aEnviar.numSeq);
 
-    int numeroBytes = 10 + strlen(aEnviar.texto);
+    size_t numeroBytes = 10 + aEnviar.texto.size();
 
-    char mensagem[numeroBytes + 1];
+    unsigned char mensagem[numeroBytes + 1];
 
-    mensagem[0] = ((char *)(&tipo))[0];
-    mensagem[1] = ((char *)(&tipo))[1];
+    mensagem[0] = tipo & 0xFF;
+    mensagem[1] = (tipo >> 8) & 0xFF;
 
-    mensagem[2] = ((char *)(&idOrigem))[0];
-    mensagem[3] = ((char *)(&idOrigem))[1];
+    mensagem[2] = idOrigem & 0xFF;
+    mensagem[3] = (idOrigem >> 8) & 0xFF;
 
-    mensagem[4] = ((char *)(&idDestino))[0];
-    mensagem[5] = ((char *)(&idDestino))[1];
+    mensagem[4] = idDestino & 0xFF;
+    mensagem[5] = (idDestino >> 8) & 0xFF;
 
-    mensagem[6] = ((char *)(&numSeq))[0];
-    mensagem[7] = ((char *)(&numSeq))[1];
+    mensagem[6] = numSeq & 0xFF;
+    mensagem[7] = (numSeq >> 8) & 0xFF;
 
-    size_t tamanhoTexto = strlen(aEnviar.texto);
+    size_t tamanhoTexto = aEnviar.texto.size();
     short tamanho = htons(tamanhoTexto);
 
-    mensagem[8] = ((char *)(&tamanho))[0];
-    mensagem[9] = ((char *)(&tamanho))[1];
+    mensagem[8] = tamanho & 0xFF;
+    mensagem[9] = (tamanho >> 8) & 0xFF;
 
-    for (int i = 0; i < tamanhoTexto; i++)
+    for (size_t i = 0; i < tamanhoTexto; i++)
     {
         mensagem[10 + i] = aEnviar.texto[i];
     }
@@ -99,8 +92,8 @@ void enviarMensagem(int socket, Mensagem aEnviar)
     mensagem[10 + tamanhoTexto] = '\n';
 
     // Envia o conteudo de 'mensagem' para o cliente
-    size_t tamanhoMensagemEnviada = send(socket, mensagem, strlen(mensagem), 0);
-    if (strlen(mensagem) != tamanhoMensagemEnviada)
+    size_t tamanhoMensagemEnviada = send(socket, (char *)&mensagem[0], numeroBytes + 1, 0);
+    if (numeroBytes + 1 != tamanhoMensagemEnviada)
     {
         sairComMensagem("Erro ao enviar mensagem ao cliente");
     }
@@ -122,13 +115,7 @@ Mensagem receberMensagem(int socket)
             return mensagem;
         }
         tamanhoMensagem += tamanhoLidoAgora;
-    } while (mensagem[strlen(mensagem) - 1] != '\n');
-
-    unsigned short tipo;
-    unsigned short idOrigem;
-    unsigned short idDestino;
-    unsigned short numSeq;
-    char *texto;
+    } while (mensagem[tamanhoMensagem - 1] != '\n');
 
     unsigned short tipo = *((unsigned short *)mensagem);
     unsigned short idOrigem = *((unsigned short *)(mensagem + 2));
@@ -140,11 +127,10 @@ Mensagem receberMensagem(int socket)
     retorno.idOrigem = ntohs(idOrigem);
     retorno.idDestino = ntohs(idDestino);
     retorno.numSeq = ntohs(numSeq);
-    retorno.tamanho = ntohs(tamanho);
-    for (int i = 0; i < retorno.tamanho; i++)
+    tamanho = ntohs(tamanho);
+    for (int i = 0; i < tamanho; i++)
     {
-        retorno.texto[i] = mensagem[10 + i];
+        retorno.texto += mensagem[10 + i];
     }
-    retorno.texto[retorno.tamanho] = '\0';
     return retorno;
 }

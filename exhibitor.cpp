@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <iostream>
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -11,18 +12,22 @@
 
 #define BUFSZ 512
 
+unsigned short idServidor = 65535;
+
+unsigned short seqMsgs = 1;
+
 void tratarParametroIncorreto(char *comandoPrograma)
 {
     // Imprime o uso correto dos parâmetros do programa e encerra o programa
-    printf("Uso: %s <ip do servidor> <porta do servidor>\n", comandoPrograma);
-    printf("Exemplo: %s 127.0.0.1 51511\n", comandoPrograma);
+    printf("Uso: %s <host:porta>\n", comandoPrograma);
+    printf("Exemplo (lembrando que o padrao do servidor e IPv6): %s ::1:51511\n", comandoPrograma);
     exit(EXIT_FAILURE);
 }
 
 void verificarParametros(int argc, char **argv)
 {
     // Caso o programa possua menos de 2 argumentos imprime a mensagem do uso correto de seus parâmetros
-    if (argc < 3)
+    if (argc < 2)
     {
         tratarParametroIncorreto(argv[0]);
     }
@@ -97,48 +102,160 @@ void conectarAoServidor(struct sockaddr_storage *dadosSocket, int socketCliente)
     printf("Conectado ao endereco %s\n", enderecoStr);
 }
 
-void recebeMensagemServidor(int socketCliente, char mensagem[BUFSZ])
+unsigned short enviarHi(int socketCliente)
 {
-    memset(mensagem, 0, BUFSZ);
-    size_t tamanhoMensagem = 0;
-    // Recebe mensagens do servidor enquanto elas não terminarem com \n
-    do
+    Mensagem mensagem;
+    mensagem.tipo = 3;
+    mensagem.idOrigem = 0;
+    mensagem.idDestino = idServidor;
+    mensagem.numSeq = seqMsgs++;
+    mensagem.texto[0] = '\0';
+    printf("> hi\n");
+    enviarMensagem(socketCliente, mensagem);
+    Mensagem resposta = receberMensagem(socketCliente);
+    if (!resposta.valida || resposta.tipo == 2)
     {
-        size_t tamanhoLidoAgora = recv(socketCliente, mensagem + tamanhoMensagem, BUFSZ - (int)tamanhoMensagem - 1, 0);
-        if (tamanhoLidoAgora == 0)
-        {
-            break;
-        }
-        tamanhoMensagem += tamanhoLidoAgora;
-    } while (mensagem[strlen(mensagem) - 1] != '\n');
-    mensagem[tamanhoMensagem] = '\0';
-
-    // Caso a mensagem lida tenha tamanho zero, o servidor foi desconectado
-    if (strlen(mensagem) == 0)
-    {
-        // Conexão caiu
-        exit(EXIT_SUCCESS);
+        sairComMensagem("Erro ao enviar o hi");
     }
+    printf("< ok\n");
+    return resposta.idDestino;
+}
+
+void enviarNomePlaneta(std::string nomePlaneta, unsigned short idCliente, int socketCliente)
+{
+    Mensagem mensagem;
+    mensagem.tipo = 8;
+    mensagem.idOrigem = idCliente;
+    mensagem.idDestino = idServidor;
+    mensagem.numSeq = seqMsgs++;
+    printf("> origin %s\n", nomePlaneta.c_str());
+    mensagem.texto = nomePlaneta;
+    enviarMensagem(socketCliente, mensagem);
+    Mensagem resposta = receberMensagem(socketCliente);
+    if (!resposta.valida || resposta.tipo == 2)
+    {
+        sairComMensagem("Erro ao enviar o origin");
+    }
+    printf("< ok\n");
+}
+
+void tratarKill(int socketCliente, unsigned short idCliente, Mensagem mensagem)
+{
+    printf("< kill de %d\n", mensagem.idOrigem);
+    Mensagem resposta;
+    resposta.tipo = 1; // Mensagem ok
+    resposta.idOrigem = idCliente;
+    resposta.idDestino = idServidor;
+    resposta.numSeq = seqMsgs - 1;
+    enviarMensagem(socketCliente, resposta);
+}
+
+void tratarMsg(int socketCliente, unsigned short idCliente, Mensagem mensagem)
+{
+    printf("< msg de %d: \"%s\"\n", mensagem.idOrigem, mensagem.texto.c_str());
+    Mensagem resposta;
+    resposta.tipo = 1; // Mensagem ok
+    resposta.idOrigem = idCliente;
+    resposta.idDestino = idServidor;
+    resposta.numSeq = seqMsgs - 1;
+    printf("Enviou ok\n");
+    enviarMensagem(socketCliente, resposta);
+}
+
+void tratarCList(int socketCliente, unsigned short idCliente, Mensagem mensagem)
+{
+    printf("< clist de %d: \"%s\"\n", mensagem.idOrigem, mensagem.texto.c_str());
+    Mensagem resposta;
+    resposta.tipo = 1; // Mensagem ok
+    resposta.idOrigem = idCliente;
+    resposta.idDestino = idServidor;
+    resposta.numSeq = seqMsgs++;
+    enviarMensagem(socketCliente, resposta);
+}
+
+void tratarPlanet(int socketCliente, unsigned short idCliente, Mensagem mensagem)
+{
+    printf("< planet de %d: \"%s\"\n", mensagem.idDestino, mensagem.texto.c_str());
+    Mensagem resposta;
+    resposta.tipo = 1; // Mensagem ok
+    resposta.idOrigem = idCliente;
+    resposta.idDestino = idServidor;
+    resposta.numSeq = seqMsgs - 1;
+    enviarMensagem(socketCliente, resposta);
+}
+
+void tratarPlanetList(int socketCliente, unsigned short idCliente, Mensagem mensagem)
+{
+    printf("< planetlist de %d: \"%s\"\n", mensagem.idOrigem, mensagem.texto.c_str());
+    Mensagem resposta;
+    resposta.tipo = 1; // Mensagem ok
+    resposta.idOrigem = idCliente;
+    resposta.idDestino = idServidor;
+    resposta.numSeq = seqMsgs - 1;
+    enviarMensagem(socketCliente, resposta);
 }
 
 void comunicarComServidor(int socketCliente)
 {
+    unsigned short idCliente = enviarHi(socketCliente);
+    printf("Id recebido pelo servidor = %d\n", idCliente);
+    printf("Digite o nome do planeta: ");
+    std::string nomePlaneta;
+    std::cin >> nomePlaneta;
+    enviarNomePlaneta(nomePlaneta, idCliente, socketCliente);
     // Laço para a comunicação do cliente com o servidor
-    char mensagem[BUFSZ];
     while (1)
     {
-        recebeMensagemServidor(socketCliente, mensagem);
-        printf("%s", mensagem);
+        Mensagem mensagem = receberMensagem(socketCliente);
+        switch (mensagem.tipo)
+        {
+        case 1:
+            printf("< OK de %d\n", mensagem.idOrigem);
+            break; // OK
+        case 2:
+            printf("< ERROR de %d\n", mensagem.idOrigem);
+            break; // ERROR
+        case 4:
+            tratarKill(socketCliente, idCliente, mensagem);
+            return; // KILL
+        case 5:
+            tratarMsg(socketCliente, idCliente, mensagem);
+            break; // MSG
+        case 7:
+            tratarCList(socketCliente, idCliente, mensagem);
+            break; // CLIST
+        case 9:
+            tratarPlanet(socketCliente, idCliente, mensagem);
+            break; // PLANET
+        case 10:
+            tratarPlanetList(socketCliente, idCliente, mensagem);
+            break; // PLANETLIST
+        default:
+            Mensagem resposta;
+            resposta.tipo = 2; // Mensagem de erro
+            resposta.idOrigem = idServidor;
+            resposta.idDestino = mensagem.idDestino;
+            resposta.numSeq = mensagem.numSeq;
+            enviarMensagem(socketCliente, resposta);
+        }
     }
 }
 
 int main(int argc, char **argv)
 {
     verificarParametros(argc, argv);
+    char host[BUFSZ];
+    char *p = strrchr(argv[1], ':');
+    *p = '\0';
+    strcpy(host, argv[1]);
+    p++;
+    char porta[BUFSZ];
+    strcpy(porta, p);
     struct sockaddr_storage dadosSocket;
-    inicializarDadosSocket(argv[1], argv[2], &dadosSocket, argv[0]);
+    inicializarDadosSocket(host, porta, &dadosSocket, argv[0]);
     int socketCliente = inicializarSocketCliente(&dadosSocket);
     conectarAoServidor(&dadosSocket, socketCliente);
     comunicarComServidor(socketCliente);
+    close(socketCliente);
     exit(EXIT_SUCCESS);
 }

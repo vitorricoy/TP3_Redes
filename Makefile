@@ -1,8 +1,9 @@
 all:
-	g++ -Wall -c common.c
-	g++ -Wall emissor.c common.o -o emissor
-	g++ -Wall exibidor.c common.o -o exibidor
-	g++ -Wall server.c common.o -o server
+	g++ -Wall -c common.cpp
+	g++ -Wall -c estruturas.cpp
+	g++ -Wall emitter.cpp common.o -o emitter
+	g++ -Wall exhibitor.cpp common.o -o exhibitor
+	g++ -Wall server.cpp common.o estruturas.o -pthread -o server
 
 clean:
-	rm common.o exibidor emissor server
+	rm common.o exhibitor emitter server

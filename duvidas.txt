@@ -23,3 +23,19 @@ Falar que HI com valor diferente de 2^12 a 2^13-1 cria um emissor com nenhum exi
 Pode ser que conecte cliente o suficiente pra acabar os ids ao longo do tempo? (PERGUNTAR)
 
 Servidor vira a origem do KILL para o exibidor. Se receber KILL de alguem que não é emissor retorna erro.
+
+O CList tem que enviar a lista como inteiros mesmo? (PERGUNTAR)
+
+16384 é o exibidor padrão dos emissores (invalido)
+
+Não dá pra registrar um emissor com um exibidor que nao existe e colocar o exibidor depois
+
+Falar do problema com o planet
+
+A thread do exibidor encerra assim que ele registra o planeta
+
+PlanetList vem ordenado e Clist vem ordenado
+
+Emissor manda mensagem pra todo mundo se der o id
+
+Fez um monitor pras estruturas de dados
