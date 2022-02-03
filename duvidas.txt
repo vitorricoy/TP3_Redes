@@ -12,8 +12,6 @@ Pode colocar numero de caracteres pra tudo que manda alguma mensagem
 
 Imprimir identificador do servidor na tela
 
-Qualquer coisa com emissor no destino passar pro exibidor dele
-
 Falar que envia os shorts tudo como network byte order
 
 Falar que manda tamanho igual a zero pra todas as mensagens sem mensagem no corpo

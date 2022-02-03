@@ -420,6 +420,12 @@ void tratarMensagemPlanetList(Mensagem mensagem, int socketCliente)
 
 int tratarMensagemRecebida(Mensagem mensagem, int socketCliente)
 {
+    if (estruturas.obterSocket(mensagem.idOrigem) != socketCliente)
+    {
+        // Cliente se passando por outro
+        enviarErro(mensagem, mensagem.idOrigem, socketCliente);
+    }
+
     switch (mensagem.tipo)
     {
     case 1:
