@@ -368,7 +368,26 @@ void tratarMensagemPlanet(Mensagem mensagem, int socketCliente)
     }
     else
     {
-        if (estruturas.temExibidorAssociado(mensagem.idOrigem))
+        if (estruturas.isEmissor(mensagem.idDestino))
+        {
+            if (estruturas.temExibidorAssociado(mensagem.idOrigem))
+            {
+                Mensagem planet;
+                planet.tipo = mensagem.tipo;
+                planet.idOrigem = mensagem.idOrigem;
+                planet.idDestino = mensagem.idDestino;
+                planet.numSeq = mensagem.numSeq;
+                planet.texto = estruturas.obterPlaneta(mensagem.idDestino);
+                int exibidor = estruturas.obterExibidorAssociado(mensagem.idDestino);
+                enviarMensagem(estruturas.obterSocket(exibidor), planet);
+                Mensagem confirmacao = receberMensagem(estruturas.obterSocket(exibidor));
+                if (!confirmacao.valida || confirmacao.tipo == 2)
+                {
+                    printf("Erro ao receber a confirmação de PLANET do cliente %d\n", exibidor);
+                }
+            }
+        }
+        else
         {
             Mensagem planet;
             planet.tipo = mensagem.tipo;
@@ -376,12 +395,11 @@ void tratarMensagemPlanet(Mensagem mensagem, int socketCliente)
             planet.idDestino = mensagem.idDestino;
             planet.numSeq = mensagem.numSeq;
             planet.texto = estruturas.obterPlaneta(mensagem.idDestino);
-            int exibidor = estruturas.obterExibidorAssociado(mensagem.idOrigem);
-            enviarMensagem(estruturas.obterSocket(exibidor), planet);
-            Mensagem confirmacao = receberMensagem(estruturas.obterSocket(exibidor));
+            enviarMensagem(estruturas.obterSocket(mensagem.idDestino), planet);
+            Mensagem confirmacao = receberMensagem(estruturas.obterSocket(mensagem.idDestino));
             if (!confirmacao.valida || confirmacao.tipo == 2)
             {
-                printf("Erro ao receber a confirmação de PLANET do cliente %d\n", exibidor);
+                printf("Erro ao receber a confirmação de PLANET do cliente %d\n", mensagem.idDestino);
             }
         }
         enviarOk(mensagem, mensagem.idOrigem, socketCliente);
