@@ -101,10 +101,6 @@ void conectarAoServidor(struct sockaddr_storage *dadosSocket, int socketCliente)
     {
         sairComMensagem("Erro ao conectar no servidor");
     }
-    // Printa um log para debug TODO
-    char enderecoStr[BUFSZ];
-    converterEnderecoParaString(enderecoSocket, enderecoStr, BUFSZ);
-    printf("Conectado ao endereco %s\n", enderecoStr);
 }
 
 void leMensagemEntrada(char mensagem[BUFSZ])
@@ -119,167 +115,235 @@ void leMensagemEntrada(char mensagem[BUFSZ])
     }
 }
 
+// Envia uma mensagem hi ao servidor
 unsigned short enviarHi(int socketCliente)
 {
+    // Constroi a mensagem hi com o corpo vazio e o id do exibidor
     Mensagem mensagem;
     mensagem.tipo = 3;
     mensagem.idOrigem = idExibidor;
     mensagem.idDestino = idServidor;
     mensagem.numSeq = seqMsgs++;
     mensagem.texto[0] = '\0';
+
+    // Envia a mensagem hi
     printf("> hi\n");
     enviarMensagem(socketCliente, mensagem);
+
+    // Recebe a resposta
     Mensagem resposta = receberMensagem(socketCliente);
+
+    // Caso a resposta seja invalida ou do tipo erro encerra a execução do emissor
     if (!resposta.valida || resposta.tipo == 2)
     {
         sairComMensagem("Erro ao enviar o hi");
     }
+
+    // Imprime que foi recebido um ok
     printf("< ok\n");
+
+    // Retorna o id recebido pelo servidor
     return resposta.idDestino;
 }
 
+// Envia o nome do planeta lido para o servidor
 void enviarNomePlaneta(std::string nomePlaneta, unsigned short idCliente, int socketCliente)
 {
+    // Constroi a mensagem origin
     Mensagem mensagem;
     mensagem.tipo = 8;
     mensagem.idOrigem = idCliente;
     mensagem.idDestino = idServidor;
     mensagem.numSeq = seqMsgs++;
-    printf("> origin %s\n", nomePlaneta.c_str());
     mensagem.texto = nomePlaneta;
+
+    // Envia a mensagem origin
+    printf("> origin %s\n", nomePlaneta.c_str());
     enviarMensagem(socketCliente, mensagem);
+
+    // Recebe a resposta
     Mensagem resposta = receberMensagem(socketCliente);
+
+    // Caso a resposta seja invalida ou do tipo erro encerra a execução do emissor
     if (!resposta.valida || resposta.tipo == 2)
     {
         sairComMensagem("Erro ao enviar o origin");
     }
+
+    // Imprime que foi recebido um ok
     printf("< ok\n");
 }
 
+// Trata a comunicacao do cliente com o servidor
 void comunicarComServidor(int socketCliente)
 {
+    // Envia um hi para o servidor e recebe o id
     unsigned short idCliente = enviarHi(socketCliente);
+
+    // Imprime o id recebido
     printf("Id recebido pelo servidor = %d\n", idCliente);
+
+    // Le o nome do planeta do teclado
     printf("Digite o nome do planeta: ");
     std::string nomePlaneta;
     std::cin >> nomePlaneta;
     std::cin.ignore();
+
+    // Envia o nome do planeta ao servidor
     enviarNomePlaneta(nomePlaneta, idCliente, socketCliente);
-    // Laço para a comunicação do cliente com o servidor
+
+    // Laco de leitura de comandos da entrada
     while (1)
     {
+        // Le o comando d aentrada
         std::string entrada;
         printf("> ");
         getline(std::cin, entrada);
         std::stringstream ss(entrada);
+
+        // Le a operacao do comando recebido
         std::string operacao;
         ss >> operacao;
+
+        // Se for um comando de mensagem
         if (operacao == "msg")
         {
+            // Le o destino da mensagem
             unsigned short destino;
             ss >> destino;
+            // Descarta o espaço que separa o destino do conteudo da mensagem
             char lixo;
             ss >> std::noskipws >> lixo >> std::skipws;
+            // Le o conteudo da mensagem
             std::string texto;
             getline(ss, texto);
+            // Constroi a mensagem que sera enviada
             Mensagem mensagem;
             mensagem.tipo = 5;
             mensagem.idOrigem = idCliente;
             mensagem.idDestino = destino;
             mensagem.numSeq = seqMsgs++;
             mensagem.texto = texto;
+            // Envia a mensagem construida
             enviarMensagem(socketCliente, mensagem);
+            // Recebe a resposta
             Mensagem resposta = receberMensagem(socketCliente);
+            // Se ela for valida e de ok, imprime ok
             if (resposta.valida && resposta.tipo == 1)
             {
                 printf("< ok\n");
             }
             else
             {
+                // Senao imprime erro
                 printf("< error\n");
             }
         }
         else if (operacao == "creq")
         {
+            // Se for um comando de creq, le o destino
             unsigned short destino;
             ss >> destino;
+            // Constroi a mensagem a ser enviada
             Mensagem mensagem;
             mensagem.tipo = 6;
             mensagem.idOrigem = idCliente;
             mensagem.idDestino = destino;
             mensagem.numSeq = seqMsgs++;
+            // Envia a mensagem
             enviarMensagem(socketCliente, mensagem);
+            // Recebe a resposta
             Mensagem resposta = receberMensagem(socketCliente);
+            // Se ela for valida e de ok, imprime ok
             if (resposta.valida && resposta.tipo == 1)
             {
                 printf("< ok\n");
             }
             else
             {
+                // Senao imprime erro
                 printf("< error\n");
             }
         }
         else if (operacao == "planet")
         {
+            // Se for um comando de planet, le o destino
             unsigned short destino;
             ss >> destino;
+            // Constroi a mensagem a ser enviada
             Mensagem mensagem;
             mensagem.tipo = 9;
             mensagem.idOrigem = idCliente;
             mensagem.idDestino = destino;
             mensagem.numSeq = seqMsgs++;
+            // Envia a mensagem
             enviarMensagem(socketCliente, mensagem);
+            // Recebe a resposta
             Mensagem resposta = receberMensagem(socketCliente);
+            // Se ela for valida e de ok, imprime ok
             if (resposta.valida && resposta.tipo == 1)
             {
                 printf("< ok\n");
             }
             else
             {
+                // Senao imprime erro
                 printf("< error\n");
             }
         }
         else if (operacao == "kill")
         {
-            unsigned short destino;
-            ss >> destino;
+            // Se for um comando de kill
+            // Constroi a mensagem a ser enviada
             Mensagem mensagem;
             mensagem.tipo = 4;
             mensagem.idOrigem = idCliente;
             mensagem.idDestino = idServidor;
             mensagem.numSeq = seqMsgs++;
+            // Envia a mensagem
             enviarMensagem(socketCliente, mensagem);
+            // Recebe a resposta
             Mensagem resposta = receberMensagem(socketCliente);
+            // Se ela for valida e de ok, imprime ok
             if (resposta.valida && resposta.tipo == 1)
             {
                 printf("< ok\n");
             }
             else
             {
+                // Senao imprime erro
                 printf("< error\n");
             }
+            // Encerra a execucao do emissor
             return;
         }
         else if (operacao == "planetlist")
         {
+            // Se for um comando de planetlist
+            // Constroi a mensagem a ser enviada
             Mensagem mensagem;
             mensagem.tipo = 10;
             mensagem.idOrigem = idCliente;
             mensagem.idDestino = idServidor;
             mensagem.numSeq = seqMsgs++;
+            // Envia a mensagem
             enviarMensagem(socketCliente, mensagem);
+            // Recebe a resposta
             Mensagem resposta = receberMensagem(socketCliente);
+            // Se ela for valida e de ok, imprime ok
             if (resposta.valida && resposta.tipo == 1)
             {
                 printf("< ok\n");
             }
             else
             {
+                // Senao imprime erro
                 printf("< error\n");
             }
         }
         else
         {
+            // Se o comando nao for um comando valido, imprime que ele é invalido
             printf("Comando inválido!\n");
         }
     }
@@ -287,7 +351,9 @@ void comunicarComServidor(int socketCliente)
 
 int main(int argc, char **argv)
 {
+    // Verifica os parametros recebidos
     verificarParametros(argc, argv);
+    // Constroi o host e porta a partir da string 'host:porta' recebida
     char host[BUFSZ];
     char *p = strrchr(argv[1], ':');
     *p = '\0';
@@ -295,14 +361,23 @@ int main(int argc, char **argv)
     p++;
     char porta[BUFSZ];
     strcpy(porta, p);
+    // Se um id de exibidor foi passado por parametro
     if (argc > 2)
     {
+        // Salva o id do exibidor recebido
         idExibidor = atoi(argv[2]);
     }
+    // Inicializa os dados do socket
     struct sockaddr_storage dadosSocket;
     inicializarDadosSocket(host, porta, &dadosSocket, argv[0]);
+    // Inicializa os dados do socket do cliente
     int socketCliente = inicializarSocketCliente(&dadosSocket);
+    // Conecta ao servidor
     conectarAoServidor(&dadosSocket, socketCliente);
+    // Comunica com o servidor
     comunicarComServidor(socketCliente);
+    // Fecha o socket criado
+    close(socketCliente);
+    // Encerra o programa
     exit(EXIT_SUCCESS);
 }

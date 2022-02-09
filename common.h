@@ -7,15 +7,16 @@
 // Encerra o programa com a mensagem 'msg'
 void sairComMensagem(const char *msg);
 
-// Converte um endereço de socket para string
-void converterEnderecoParaString(struct sockaddr *endereco, char *string, size_t tamanhoString);
-
+// Define a estrutura da mensagem que trafega pelo sistema
 struct Mensagem;
 
+// Envia uma mensagem na conexão determinada pelo socket
 void enviarMensagem(int socket, Mensagem mensagem);
 
+// Recebe uma mensagem da conexão determinada pelo socket
 Mensagem receberMensagem(int socket);
 
+// Define a estrutura da mensagem que trafega pelo sistema
 struct Mensagem
 {
     unsigned short tipo;

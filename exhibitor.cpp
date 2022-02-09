@@ -20,7 +20,7 @@ void tratarParametroIncorreto(char *comandoPrograma)
 {
     // Imprime o uso correto dos parâmetros do programa e encerra o programa
     printf("Uso: %s <host:porta>\n", comandoPrograma);
-    printf("Exemplo (lembrando que o padrao do servidor e IPv6): %s ::1:51511\n", comandoPrograma);
+    printf("Exemplo (por padrao o servidor usa IPv6): %s ::1:51511\n", comandoPrograma);
     exit(EXIT_FAILURE);
 }
 
@@ -96,52 +96,67 @@ void conectarAoServidor(struct sockaddr_storage *dadosSocket, int socketCliente)
     {
         sairComMensagem("Erro ao conectar no servidor");
     }
-    // Printa um log para debug TODO
-    char enderecoStr[BUFSZ];
-    converterEnderecoParaString(enderecoSocket, enderecoStr, BUFSZ);
-    printf("Conectado ao endereco %s\n", enderecoStr);
 }
 
+// Envia uma mensagem hi ao servidor
 unsigned short enviarHi(int socketCliente)
 {
+    // Constroi a mensagem hi com o corpo vazio e o id do exibidor
     Mensagem mensagem;
     mensagem.tipo = 3;
-    mensagem.idOrigem = 0;
+    mensagem.idOrigem = idExibidor;
     mensagem.idDestino = idServidor;
     mensagem.numSeq = seqMsgs++;
     mensagem.texto[0] = '\0';
+
+    // Envia a mensagem hi
     printf("> hi\n");
     enviarMensagem(socketCliente, mensagem);
+
+    // Recebe a resposta
     Mensagem resposta = receberMensagem(socketCliente);
+
+    // Caso a resposta seja invalida ou do tipo erro encerra a execução do emissor
     if (!resposta.valida || resposta.tipo == 2)
     {
         sairComMensagem("Erro ao enviar o hi");
     }
-    printf("< ok\n");
+
+    // Retorna o id recebido pelo servidor
     return resposta.idDestino;
 }
 
+// Envia o nome do planeta lido para o servidor
 void enviarNomePlaneta(std::string nomePlaneta, unsigned short idCliente, int socketCliente)
 {
+    // Constroi a mensagem origin
     Mensagem mensagem;
     mensagem.tipo = 8;
     mensagem.idOrigem = idCliente;
     mensagem.idDestino = idServidor;
     mensagem.numSeq = seqMsgs++;
-    printf("> origin %s\n", nomePlaneta.c_str());
     mensagem.texto = nomePlaneta;
+
+    // Envia a mensagem origin
+    printf("> origin %s\n", nomePlaneta.c_str());
     enviarMensagem(socketCliente, mensagem);
+
+    // Recebe a resposta
     Mensagem resposta = receberMensagem(socketCliente);
+
+    // Caso a resposta seja invalida ou do tipo erro encerra a execução do emissor
     if (!resposta.valida || resposta.tipo == 2)
     {
         sairComMensagem("Erro ao enviar o origin");
     }
-    printf("< ok\n");
 }
 
+// Trata o recebimento de uma mensagem kill
 void tratarKill(int socketCliente, unsigned short idCliente, Mensagem mensagem)
 {
+    // Imprime o comando recebido e de quem ele foi recebido
     printf("< kill de %d\n", mensagem.idOrigem);
+    // Envia a mensagem de ok
     Mensagem resposta;
     resposta.tipo = 1; // Mensagem ok
     resposta.idOrigem = idCliente;
@@ -150,28 +165,35 @@ void tratarKill(int socketCliente, unsigned short idCliente, Mensagem mensagem)
     enviarMensagem(socketCliente, resposta);
 }
 
+// Trata o recebimento de uma mensagem do tipo mensagem
 void tratarMsg(int socketCliente, unsigned short idCliente, Mensagem mensagem)
 {
+    // Se a mensagem é de broadcast
     if (mensagem.idDestino == 0)
     {
+        // Imprime que uma mensagem de broadcast foi recebida, a origem da mensagem e o seu conteudo
         printf("< msg de broadcast de %d: \"%s\"\n", mensagem.idOrigem, mensagem.texto.c_str());
     }
     else
     {
+        // Senao, imprime que uma mensagem foi recebida, a origem da mensagem e o seu conteudo
         printf("< msg de %d: \"%s\"\n", mensagem.idOrigem, mensagem.texto.c_str());
     }
+    // Envia a mensagem de ok
     Mensagem resposta;
     resposta.tipo = 1; // Mensagem ok
     resposta.idOrigem = idCliente;
     resposta.idDestino = idServidor;
     resposta.numSeq = seqMsgs - 1;
-    printf("Enviou ok\n");
     enviarMensagem(socketCliente, resposta);
 }
 
+// Trata o recebimento de uma mensagem clist
 void tratarCList(int socketCliente, unsigned short idCliente, Mensagem mensagem)
 {
+    // Imprime o comando recebido, de quem ele foi recebido e o seu conteudo
     printf("< clist de %d: \"%s\"\n", mensagem.idOrigem, mensagem.texto.c_str());
+    // Envia a mensagem de ok
     Mensagem resposta;
     resposta.tipo = 1; // Mensagem ok
     resposta.idOrigem = idCliente;
@@ -180,9 +202,12 @@ void tratarCList(int socketCliente, unsigned short idCliente, Mensagem mensagem)
     enviarMensagem(socketCliente, resposta);
 }
 
+// Trata o recebimento de uma mensagem planet
 void tratarPlanet(int socketCliente, unsigned short idCliente, Mensagem mensagem)
 {
+    // Imprime o comando recebido, de quem ele foi recebido e o seu conteudo
     printf("< planet de %d: \"%s\"\n", mensagem.idDestino, mensagem.texto.c_str());
+    // Envia a mensagem de ok
     Mensagem resposta;
     resposta.tipo = 1; // Mensagem ok
     resposta.idOrigem = idCliente;
@@ -191,9 +216,12 @@ void tratarPlanet(int socketCliente, unsigned short idCliente, Mensagem mensagem
     enviarMensagem(socketCliente, resposta);
 }
 
+// Trata o recebimento de uma mensagem planetlist
 void tratarPlanetList(int socketCliente, unsigned short idCliente, Mensagem mensagem)
 {
+    // Imprime o comando recebido, de quem ele foi recebido e o seu conteudo
     printf("< planetlist de %d: \"%s\"\n", mensagem.idOrigem, mensagem.texto.c_str());
+    // Envia a mensagem de ok
     Mensagem resposta;
     resposta.tipo = 1; // Mensagem ok
     resposta.idOrigem = idCliente;
@@ -202,42 +230,73 @@ void tratarPlanetList(int socketCliente, unsigned short idCliente, Mensagem mens
     enviarMensagem(socketCliente, resposta);
 }
 
+// Trata a comunicacao do cliente com o servidor
 void comunicarComServidor(int socketCliente)
 {
+    // Envia um hi para o servidor e recebe o id
     unsigned short idCliente = enviarHi(socketCliente);
+
+    // Imprime o id recebido
     printf("Id recebido pelo servidor = %d\n", idCliente);
+
+    // Le o nome do planeta do teclado
     printf("Digite o nome do planeta: ");
     std::string nomePlaneta;
     std::cin >> nomePlaneta;
+
+    // Envia o nome do planeta ao servidor
     enviarNomePlaneta(nomePlaneta, idCliente, socketCliente);
-    // Laço para a comunicação do cliente com o servidor
+
+    // Laço para a comunicacao, em que o cliente espera por mensagens do servidor
     while (1)
     {
+        // Recebe uma mensagem do servidor
         Mensagem mensagem = receberMensagem(socketCliente);
+        // Se a mensagem for invalida
+        if (!mensagem.valida)
+        {
+            // Envia uma resposta indicando erro
+            Mensagem resposta;
+            resposta.tipo = 2; // Mensagem erro
+            resposta.idOrigem = idCliente;
+            resposta.idDestino = idServidor;
+            resposta.numSeq = seqMsgs - 1;
+            enviarMensagem(socketCliente, resposta);
+            continue;
+        }
+        // Verifica o tipo da mensagem
         switch (mensagem.tipo)
         {
         case 1:
-            printf("< OK de %d\n", mensagem.idOrigem);
+            // Se for mensagem de ok imprime que foi recebido um ok do cliente de origem
+            printf("< ok de %d\n", mensagem.idOrigem);
             break; // OK
         case 2:
-            printf("< ERROR de %d\n", mensagem.idOrigem);
+            // Se for mensagem de erro imprime que foi recebido um erro do cliente de origem
+            printf("< error de %d\n", mensagem.idOrigem);
             break; // ERROR
         case 4:
+            // Se for mensagem de kill, chama o tratamento adequado
             tratarKill(socketCliente, idCliente, mensagem);
             return; // KILL
         case 5:
+            // Se for mensagem do tipo mensagem, chama o tratamento adequado
             tratarMsg(socketCliente, idCliente, mensagem);
             break; // MSG
         case 7:
+            // Se for mensagem de clist, chama o tratamento adequado
             tratarCList(socketCliente, idCliente, mensagem);
             break; // CLIST
         case 9:
+            // Se for mensagem de planet, chama o tratamento adequado
             tratarPlanet(socketCliente, idCliente, mensagem);
             break; // PLANET
         case 10:
+            // Se for mensagem de planetlist, chama o tratamento adequado
             tratarPlanetList(socketCliente, idCliente, mensagem);
             break; // PLANETLIST
         default:
+            // Se for uma mensagem de tipo desconhecido retorna uma resposta de erro
             Mensagem resposta;
             resposta.tipo = 2; // Mensagem de erro
             resposta.idOrigem = idServidor;
@@ -250,7 +309,9 @@ void comunicarComServidor(int socketCliente)
 
 int main(int argc, char **argv)
 {
+    // Verifica os parametros recebidos
     verificarParametros(argc, argv);
+    // Constroi o host e porta a partir da string 'host:porta' recebida
     char host[BUFSZ];
     char *p = strrchr(argv[1], ':');
     *p = '\0';
@@ -258,11 +319,17 @@ int main(int argc, char **argv)
     p++;
     char porta[BUFSZ];
     strcpy(porta, p);
+    // Inicializa os dados do socket
     struct sockaddr_storage dadosSocket;
     inicializarDadosSocket(host, porta, &dadosSocket, argv[0]);
+    // Inicializa os dados do socket do cliente
     int socketCliente = inicializarSocketCliente(&dadosSocket);
+    // Conecta ao servidor
     conectarAoServidor(&dadosSocket, socketCliente);
+    // Comunica com o servidor
     comunicarComServidor(socketCliente);
+    // Fecha o socket criado
     close(socketCliente);
+    // Encerra o programa
     exit(EXIT_SUCCESS);
 }

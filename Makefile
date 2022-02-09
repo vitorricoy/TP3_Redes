@@ -6,4 +6,4 @@ all:
 	g++ -Wall server.cpp common.o estruturas.o -pthread -o server
 
 clean:
-	rm common.o exhibitor emitter server
+	rm common.o exhibitor emitter server estruturas.o

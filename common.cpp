@@ -16,56 +16,24 @@ void sairComMensagem(const char *msg)
     exit(EXIT_FAILURE);
 }
 
-void converterEnderecoParaString(struct sockaddr *endereco, char *string, size_t tamanhoString)
-{
-    int versao;
-    char stringEndereco[INET6_ADDRSTRLEN + 1] = "";
-    unsigned short porta;
-
-    if (endereco->sa_family == AF_INET)
-    { // Endereço é IPv4
-        versao = 4;
-        struct sockaddr_in *enderecov4 = (struct sockaddr_in *)endereco;
-        if (!inet_ntop(AF_INET, &(enderecov4->sin_addr), stringEndereco, INET_ADDRSTRLEN + 1))
-        {
-            sairComMensagem("Erro ao converter endereço para string com o comando ntop");
-        }
-        porta = ntohs(enderecov4->sin_port); // Converte a porta de network para host short
-    }
-    else
-    {
-        if (endereco->sa_family == AF_INET6)
-        { // Endereço é IPv6
-            versao = 6;
-            struct sockaddr_in6 *enderecov6 = (struct sockaddr_in6 *)endereco;
-            if (!inet_ntop(AF_INET6, &(enderecov6->sin6_addr), stringEndereco, INET6_ADDRSTRLEN + 1))
-            {
-                sairComMensagem("Erro ao converter endereço para string com o comando ntop");
-            }
-            porta = ntohs(enderecov6->sin6_port); // Converte a porta de network para host short
-        }
-        else
-        {
-            sairComMensagem("Familia de protocolo desconhecida");
-        }
-    }
-    if (string)
-    { // Formata o endereço em string para um formato legível
-        snprintf(string, tamanhoString, "IPv%d %s %hu", versao, stringEndereco, porta);
-    }
-}
-
 void enviarMensagem(int socket, Mensagem aEnviar)
 {
+    // Converte os valores do cabecalho para network byte order
     unsigned short tipo = htons(aEnviar.tipo);
     unsigned short idOrigem = htons(aEnviar.idOrigem);
     unsigned short idDestino = htons(aEnviar.idDestino);
     unsigned short numSeq = htons(aEnviar.numSeq);
 
-    size_t numeroBytes = 10 + aEnviar.texto.size();
+    size_t tamanhoTexto = aEnviar.texto.size();
+    short tamanho = htons(tamanhoTexto);
 
+    // Determina o numemro de bytes da mensagem que sera enviada
+    size_t numeroBytes = 10 + tamanhoTexto;
+
+    // Declara o vetor de caracteres sem sinal com o tamanho determinado
     unsigned char mensagem[numeroBytes + 1];
 
+    // Converte os valores do cabecalho para dois bytes que representam seu valor como unsigned short
     mensagem[0] = tipo & 0xFF;
     mensagem[1] = (tipo >> 8) & 0xFF;
 
@@ -78,21 +46,22 @@ void enviarMensagem(int socket, Mensagem aEnviar)
     mensagem[6] = numSeq & 0xFF;
     mensagem[7] = (numSeq >> 8) & 0xFF;
 
-    size_t tamanhoTexto = aEnviar.texto.size();
-    short tamanho = htons(tamanhoTexto);
-
     mensagem[8] = tamanho & 0xFF;
     mensagem[9] = (tamanho >> 8) & 0xFF;
 
+    // Adiciona o corpo da mensagem no vetor de caracteres sem sinal
     for (size_t i = 0; i < tamanhoTexto; i++)
     {
         mensagem[10 + i] = aEnviar.texto[i];
     }
 
+    // Adiciona o caractere '\n' no fim da mensagem
     mensagem[10 + tamanhoTexto] = '\n';
 
     // Envia o conteudo de 'mensagem' para o cliente
     size_t tamanhoMensagemEnviada = send(socket, (char *)&mensagem[0], numeroBytes + 1, 0);
+
+    // Se houve um erro no envio, encerra com mensagem
     if (numeroBytes + 1 != tamanhoMensagemEnviada)
     {
         sairComMensagem("Erro ao enviar mensagem ao cliente");
@@ -107,30 +76,41 @@ Mensagem receberMensagem(int socket)
     // Recebe mensagens do servidor enquanto elas não terminarem com \n
     do
     {
+        // Recebe uma parte da mensagem
         size_t tamanhoLidoAgora = recv(socket, mensagem + tamanhoMensagem, BUFSZ - (int)tamanhoMensagem - 1, 0);
+        // Se foi lido zero bytes, ocorreu um erro
         if (tamanhoLidoAgora == 0)
         {
+            // Retorna uma mensagem invalida, indicando que houve um erro
             Mensagem mensagem;
             mensagem.valida = false;
             return mensagem;
         }
+        // Adiciona no tamanho total da mensagem o tamanho da parte lida
         tamanhoMensagem += tamanhoLidoAgora;
     } while (mensagem[tamanhoMensagem - 1] != '\n');
 
+    // Converte os 10 primeiros bytes recebidos para os valores do cabecalho como unsigned short
     unsigned short tipo = *((unsigned short *)mensagem);
     unsigned short idOrigem = *((unsigned short *)(mensagem + 2));
     unsigned short idDestino = *((unsigned short *)(mensagem + 4));
     unsigned short numSeq = *((unsigned short *)(mensagem + 6));
     unsigned short tamanho = *((unsigned short *)(mensagem + 8));
+
+    // Salva os valores do cabecalho originais, sem network byte order, na mensagem que será retornada
     Mensagem retorno;
     retorno.tipo = ntohs(tipo);
     retorno.idOrigem = ntohs(idOrigem);
     retorno.idDestino = ntohs(idDestino);
     retorno.numSeq = ntohs(numSeq);
+
+    // Salva o corpo da mensnagem na mensagem que será retornada
     tamanho = ntohs(tamanho);
     for (int i = 0; i < tamanho; i++)
     {
         retorno.texto += mensagem[10 + i];
     }
+
+    // Retorna a mensagem construida
     return retorno;
 }
