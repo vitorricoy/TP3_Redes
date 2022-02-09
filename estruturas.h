@@ -26,8 +26,8 @@ public:
     Estruturas();
 
 private:
-    unsigned short proxIdEmissor;
-    unsigned short proxIdExibidor;
+    std::set<unsigned short> idEmissorAssociado;
+    std::set<unsigned short> idExibidorAssociado;
     std::map<unsigned short, unsigned short> mapaEmissorExibidor;
     std::map<unsigned short, int> mapaClienteSocket;
     std::map<unsigned short, std::string> mapaClientePlaneta;

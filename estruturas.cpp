@@ -2,20 +2,26 @@
 
 unsigned short Estruturas::obterProximoIdEmissor()
 {
-    unsigned short proximoId;
     acesso.lock();
-    proximoId = proxIdEmissor++;
+    unsigned short idInicial = 1;
+    while (idEmissorAssociado.find(idInicial) != idEmissorAssociado.end())
+    {
+        idInicial++;
+    }
     acesso.unlock();
-    return proximoId;
+    return idInicial;
 }
 
 unsigned short Estruturas::obterProximoIdExibidor()
 {
-    unsigned short proximoId;
     acesso.lock();
-    proximoId = proxIdExibidor++;
+    unsigned short idInicial = 4096;
+    while (idExibidorAssociado.find(idInicial) != idExibidorAssociado.end())
+    {
+        idInicial++;
+    }
     acesso.unlock();
-    return proximoId;
+    return idInicial;
 }
 
 void Estruturas::insereNovoExibidor(unsigned short id, int socket)
@@ -158,6 +164,4 @@ int Estruturas::obterSocket(unsigned short id)
 
 Estruturas::Estruturas()
 {
-    proxIdEmissor = 1;
-    proxIdExibidor = 4096;
 }
