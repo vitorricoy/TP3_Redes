@@ -104,7 +104,7 @@ unsigned short enviarHi(int socketCliente)
     // Constroi a mensagem hi com o corpo vazio e o id do exibidor
     Mensagem mensagem;
     mensagem.tipo = 3;
-    mensagem.idOrigem = idExibidor;
+    mensagem.idOrigem = 0;
     mensagem.idDestino = idServidor;
     mensagem.numSeq = seqMsgs++;
     mensagem.texto[0] = '\0';
