@@ -184,7 +184,7 @@ void tratarMsg(int socketCliente, unsigned short idCliente, Mensagem mensagem)
     resposta.tipo = 1; // Mensagem ok
     resposta.idOrigem = idCliente;
     resposta.idDestino = idServidor;
-    resposta.numSeq = seqMsgs - 1;
+    resposta.numSeq = seqMsgs++;
     enviarMensagem(socketCliente, resposta);
 }
 
